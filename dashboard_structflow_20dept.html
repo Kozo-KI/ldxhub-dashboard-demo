@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>経営ダッシュボード｜株式会社テクノソリューションズ</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  /* Brand */
+  --ink:#0d0d0d;--paper:#f5f3ee;--cream:#ede9e0;
+  --blue:#1a4fff;--blue-lt:#e8eeff;
+  --green:#00855a;--green-lt:#e6f4ef;
+  --orange:#d95e00;--orange-lt:#fff0e6;
+  --red:#c0392b;--red-lt:#fdf0ef;
+  --rule:#d5d0c5;--muted:#888078;
+  /* Dark shell */
+  --sh-bg:#0a0d14;--sh-bg2:#111520;--sh-bg3:#181d2e;
+  --sh-surface:#1e2438;--sh-surface2:#252c42;
+  --sh-border:#2e3754;--sh-border2:#3d4a6e;
+  --sh-accent:#4f8ef7;--sh-accent2:#7eb3ff;
+  --sh-text:#e8ecf5;--sh-text2:#8b97b8;--sh-text3:#5a6585;
+  /* Fonts */
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Plus Jakarta Sans',sans-serif;
+  --serif:'Shippori Mincho',serif;
+  /* Layout */
+  --sidebar:220px;--topbar:52px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sans);font-size:14px;line-height:1.7;height:100vh;overflow:hidden;}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--sh-bg2);}
+::-webkit-scrollbar-thumb{background:var(--sh-border2);border-radius:3px;}
+
+/* ── Shell ── */
+.shell{display:grid;grid-template-columns:var(--sidebar) 1fr;grid-template-rows:var(--topbar) 1fr;height:100vh;}
+
+/* ── Topbar ── */
+.topbar{
+  grid-column:1/-1;
+  background:var(--sh-bg2);
+  border-bottom:1px solid var(--sh-border);
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+  position:relative;z-index:100;
+}
+.topbar-logo{
+  font-family:var(--serif);font-size:17px;font-weight:700;
+  color:#fff;white-space:nowrap;letter-spacing:.02em;
+}
+.topbar-sep{width:1px;height:20px;background:var(--sh-border);}
+.topbar-title{font-size:12px;color:var(--sh-text2);}
+.topbar-badge{
+  margin-left:auto;
+  background:rgba(79,142,247,.12);border:1px solid var(--sh-accent);
+  color:var(--sh-accent2);font-family:var(--mono);font-size:10px;
+  padding:2px 10px;border-radius:20px;
+}
+.topbar-date{font-family:var(--mono);font-size:11px;color:var(--sh-text3);}
+
+/* ── Sidebar ── */
+.sidebar{
+  background:var(--sh-bg2);border-right:1px solid var(--sh-border);
+  padding:16px 0;overflow-y:auto;
+}
+.nav-section-label{
+  font-size:9px;font-weight:700;letter-spacing:.15em;
+  color:var(--sh-text3);text-transform:uppercase;
+  padding:0 18px 6px;margin-top:14px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 18px;cursor:pointer;
+  font-size:12px;color:var(--sh-text2);
+  border-left:2px solid transparent;
+  transition:all .15s;user-select:none;
+}
+.nav-item:hover{color:var(--sh-text);background:var(--sh-surface);}
+.nav-item.active{
+  color:var(--sh-accent2);background:rgba(79,142,247,.08);
+  border-left-color:var(--sh-accent);font-weight:600;
+}
+.nav-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--sh-border2);flex-shrink:0;
+  transition:background .15s;
+}
+.nav-item.active .nav-dot{background:var(--sh-accent);}
+.nav-badge{
+  margin-left:auto;font-family:var(--mono);font-size:9px;
+  background:var(--sh-surface2);color:var(--sh-text3);
+  padding:1px 6px;border-radius:10px;
+}
+.nav-badge.danger{background:rgba(192,57,43,.2);color:#e88;}
+.nav-badge.warn{background:rgba(217,94,0,.2);color:#f9a;}
+
+/* ── Main ── */
+.main-area{
+  overflow-y:auto;padding:28px 32px 60px;background:var(--sh-bg);
+}
+
+/* ── Page sections ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── Section header ── */
+.section-title{
+  font-family:var(--serif);font-size:26px;font-weight:700;
+  color:#fff;margin-bottom:4px;letter-spacing:.01em;
+}
+.section-sub{font-size:11px;color:var(--sh-text3);font-family:var(--mono);margin-bottom:24px;}
+
+/* ── KPI row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.kpi-card{
+  background:var(--sh-surface);border:1px solid var(--sh-border);
+  border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;
+  transition:border-color .2s;
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--kc,var(--sh-accent));
+}
+.kpi-card:hover{border-color:var(--sh-border2);}
+.kpi-label{font-size:10px;color:var(--sh-text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+.kpi-value{font-family:var(--mono);font-size:28px;font-weight:500;color:#fff;line-height:1;margin-bottom:4px;}
+.kpi-unit{font-size:14px;color:var(--sh-text2);}
+.kpi-sub{font-size:11px;color:var(--sh-text3);}
+.kpi-badge{
+  display:inline-block;font-size:10px;font-family:var(--mono);
+  padding:2px 8px;border-radius:4px;margin-top:6px;
+}
+.badge-blue{background:rgba(79,142,247,.15);color:var(--sh-accent2);}
+.badge-green{background:rgba(0,133,90,.15);color:#4dd;color:#3ecb8f;}
+.badge-red{background:rgba(192,57,43,.15);color:#f77;}
+.badge-warn{background:rgba(217,94,0,.15);color:#fb8;}
+
+/* ── Cards ── */
+.card{
+  background:var(--sh-surface);border:1px solid var(--sh-border);
+  border-radius:10px;padding:20px 22px;margin-bottom:16px;
+}
+.card-title{
+  font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--sh-text2);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.card-title-dot{width:4px;height:14px;background:var(--sh-accent);border-radius:2px;flex-shrink:0;}
+
+/* ── Grid helpers ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;}
+table.dtbl{width:100%;border-collapse:collapse;font-size:12px;}
+table.dtbl thead tr{background:var(--sh-bg);}
+table.dtbl th{
+  padding:9px 12px;text-align:left;
+  color:var(--sh-text3);font-family:var(--mono);font-size:9px;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-bottom:1px solid var(--sh-border);font-weight:400;
+}
+table.dtbl td{
+  padding:8px 12px;border-bottom:1px solid var(--sh-border);
+  color:var(--sh-text);vertical-align:middle;
+}
+table.dtbl tr:last-child td{border-bottom:none;}
+table.dtbl tr:hover td{background:var(--sh-surface2);}
+
+/* ── Risk badges ── */
+.risk{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;}
+.risk-high{background:rgba(192,57,43,.18);color:#f77;}
+.risk-mid{background:rgba(217,94,0,.18);color:#fb8;}
+.risk-low{background:rgba(0,133,90,.18);color:#3ecb8f;}
+
+/* ── Light content area (paper) ── */
+.paper-section{
+  background:var(--paper);color:var(--ink);
+  border-radius:10px;padding:28px 30px;margin-bottom:16px;
+}
+.paper-section h2{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:16px;}
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.dept-card{background:#fff;border:1.5px solid var(--rule);border-radius:10px;overflow:hidden;}
+.dept-card-hd{background:var(--ink);padding:13px 18px;display:flex;justify-content:space-between;align-items:center;}
+.dept-card-name{font-weight:700;font-size:12px;color:#fff;}
+.dept-card-date{font-family:var(--mono);font-size:9px;color:#666;}
+.dept-card-bd{padding:14px 18px;}
+.mini-label{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;}
+.mini-label:first-child{margin-top:0;}
+.task-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--cream);font-size:11px;}
+.task-item:last-child{border-bottom:none;}
+.task-assignee{font-weight:700;white-space:nowrap;color:var(--blue);font-size:10px;min-width:55px;}
+.task-title{color:#333;flex:1;}
+.task-due{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap;}
+.risk-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;margin:2px 2px 2px 0;}
+.rb-high{background:var(--red-lt);color:var(--red);}
+.rb-mid{background:var(--orange-lt);color:var(--orange);}
+.rb-low{background:var(--green-lt);color:var(--green);}
+.interdept-row{font-size:11px;padding:4px 0;border-bottom:1px solid var(--cream);display:flex;gap:8px;align-items:center;}
+.interdept-row:last-child{border-bottom:none;}
+.arrow{color:var(--blue);font-weight:700;}
+
+/* ── Interdept map (dark) ── */
+.idmap-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--sh-border);
+  font-size:12px;
+}
+.idmap-row:last-child{border-bottom:none;}
+.idmap-from{font-weight:600;min-width:130px;color:var(--sh-text);}
+.idmap-arrow{color:var(--sh-accent);font-weight:700;}
+.idmap-to{color:var(--sh-accent2);font-weight:600;min-width:130px;}
+.idmap-content{font-size:11px;color:var(--sh-text2);flex:1;}
+
+/* ── Status ── */
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.s-done{background:#3ecb8f;}
+.s-proc{background:#fb8;}
+
+/* ── Chart wrapper ── */
+.chart-wrap{position:relative;width:100%;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-logo">テクノソリューションズ</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">経営ダッシュボード</div>
+  <div class="topbar-badge">Power Automate × LDX hub StructFlow</div>
+  <div class="topbar-date" id="topbar-date"></div>
+</div>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="nav-section-label">概要</div>
+  <div class="nav-item active" onclick="nav(this,'overview')">
+    <span class="nav-dot"></span>経営サマリー
+    <span class="nav-badge badge-blue" id="nb-depts"></span>
+  </div>
+
+  <div class="nav-section-label">全社分析</div>
+  <div class="nav-item" onclick="nav(this,'tasks')">
+    <span class="nav-dot"></span>アクションアイテム
+    <span class="nav-badge" id="nb-tasks"></span>
+  </div>
+  <div class="nav-item" onclick="nav(this,'risks')">
+    <span class="nav-dot"></span>リスク・課題
+    <span class="nav-badge danger" id="nb-risks"></span>
+  </div>
+  <div class="nav-item" onclick="nav(this,'interdept')">
+    <span class="nav-dot"></span>部門間依頼マップ
+    <span class="nav-badge" id="nb-inter"></span>
+  </div>
+
+  <div class="nav-section-label">部門別</div>
+  <div class="nav-item" onclick="nav(this,'depts')">
+    <span class="nav-dot"></span>各部門サマリー
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main-area">
+
+  <!-- ① 経営サマリー -->
+  <section id="overview" class="page active">
+    <div class="section-title">経営サマリー</div>
+    <div class="section-sub" id="overview-sub"></div>
+
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>部門別タスク件数</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="chartTasks" role="img" aria-label="部門別タスク件数棒グラフ"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>リスク深刻度分布</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="chartRisk" role="img" aria-label="リスク深刻度分布ドーナツグラフ"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-title-dot"></span>処理ステータス</div>
+      <div id="status-list"></div>
+    </div>
+  </section>
+
+  <!-- ② アクションアイテム -->
+  <section id="tasks" class="page">
+    <div class="section-title">アクションアイテム</div>
+    <div class="section-sub">全部門・期限順</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table class="dtbl">
+          <thead>
+            <tr>
+              <th>部門</th><th>担当者</th><th>タスク内容</th><th>期限</th><th>関連部門</th>
+            </tr>
+          </thead>
+          <tbody id="tasks-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ リスク -->
+  <section id="risks" class="page">
+    <div class="section-title">リスク・課題</div>
+    <div class="section-sub">全部門・深刻度順</div>
+
+    <div class="kpi-row" id="risk-kpi-row"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>高リスク一覧</div>
+        <div id="risk-high-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>中・低リスク一覧</div>
+        <div id="risk-mid-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-title-dot"></span>リスクマトリクス（件数×深刻度）</div>
+      <div class="chart-wrap" style="height:260px;"><canvas id="chartRiskBar" role="img" aria-label="部門別リスク件数棒グラフ"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ④ 部門間依頼 -->
+  <section id="interdept" class="page">
+    <div class="section-title">部門間依頼マップ</div>
+    <div class="section-sub">クロス部門の依存関係</div>
+    <div class="card">
+      <div id="interdept-list"></div>
+    </div>
+  </section>
+
+  <!-- ⑤ 部門別サマリー -->
+  <section id="depts" class="page">
+    <div class="section-title">各部門サマリー</div>
+    <div class="section-sub">StructFlow 抽出結果</div>
+    <div class="paper-section">
+      <div class="dept-grid" id="dept-grid"></div>
+    </div>
+  </section>
+
+</main>
+</div><!-- /shell -->
+
+<script>
+// ============================================================
+// DATA — Power Automateから渡されるJSON
+// ============================================================
+const rawData = [{"results":[{"status":"succeeded","output":{"risks":[{"item":"競合F社の低価格攻勢による既存顧客離脱","severity":"高","related_dept":"営業第二部・マーケティング"},{"item":"新規開拓不足による売上の更新案件依存","severity":"中","related_dept":"営業第二部"},{"item":"パートナーE社との契約交渉長期化","severity":"低","related_dept":"営業第二部"}],"decisions":[{"title":"C社・D社との代理店契約締結","detail":"C社・D社との代理店契約を5月末までに締結する","related_dept":"法務部"},{"title":"競合F社対抗資料の共同作成","detail":"競合F社の新料金体系に対する反論資料をマーケティング部と共同で6月10日までに作成する","related_dept":"マーケティング部"},{"title":"エンタープライズ上位20顧客へのクロスセル提案活動開始","detail":"エンタープライズ上位20顧客に対してクロスセル提案活動を6月から開始する","related_dept":"プロダクト部門"}],"meeting_name":"営業第二部 5月度月次会議","department":"営業第二部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"営業第二部","to":"マーケティング部","content":"競合対抗資料の共同作成"},{"from":"営業第二部","to":"プロダクト部門","content":"クロスセル提案用製品ロードマップ共有依頼"},{"from":"営業第二部","to":"IT部門","content":"パートナーリセラーポータル構築依頼"},{"from":"営業第二部","to":"法務部","content":"代理店契約書レビュー依頼"}],"tasks":[{"title":"C社・D社との代理店契約書の最終確認と締結手続きを完了する","assignee":"小林","due_date":"2026/5/31","related_dept":"法務部"},{"title":"競合F社の新料金体系の詳細調査レポートを作成する","assignee":"吉田課長","due_date":"2026/5/20","related_dept":"マーケティング部"},{"title":"エンタープライズ上位20顧客のクロスセル提案資料を作成する","assignee":"松本","due_date":"2026/6/15","related_dept":"プロダクト部門"},{"title":"新規開拓向けターゲットリスト（月10社）を策定する","assignee":"加藤課長","due_date":"2026/5/20","related_dept":"マーケティング部"},{"title":"パートナーリセラーポータル整備をIT部門に正式依頼する","assignee":"橋本部長","due_date":"2026/5/12","related_dept":"IT部門"}],"budget":"パートナーリセラーポータル構築費用（IT部門見積もり依頼中、概算500万円）"},"id":"0"}],"job_id":"al61lku0gsi4rq5x642519xk8fcdiqjf","file_id":"al616el2b0oe299k2qnmgwv6f69hckow","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:14:11Z","updated_at":"2026-05-10T01:14:27Z","completed_at":"2026-05-10T01:14:25Z","expires_at":"2026-05-13T01:14:25Z","usage":{"total_input_characters":1462,"processed_input_characters":1462,"skipped_characters":0,"output_characters":1455,"vector_bytes":0},"output_file_id":"al610cvl377ygiz5ffn9zevb4dhokjjc"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"A社案件での競合敗北リスク","severity":"高","related_dept":"営業第一部・プリセールス"},{"item":"第二課の達成率低下が継続した場合の中小顧客基盤の縮小","severity":"中","related_dept":"営業第一部"}],"decisions":[{"title":"A社商談向け導入後サポート強化提案資料の作成","detail":"A社商談に向け、導入後サポート体制の強化提案資料を5月20日までに作成する","related_dept":"プリセールス部"},{"title":"第二課の既存顧客アップセル活動強化","detail":"5月度売上目標を達成するため、第二課は既存顧客のアップセル活動を強化する","related_dept":"営業第一部"},{"title":"ウェビナー集客フォローメールの配信","detail":"ウェビナー集客を目的とした既存顧客フォローメールを5月10日に配信する","related_dept":"マーケティング部"},{"title":"中小企業向け標準提案書テンプレートのQ2中完成","detail":"中小企業向け標準提案書テンプレートの作成をQ2中に完成させる","related_dept":"営業企画・営業第二部"}],"meeting_name":"営業第一部 5月度月次会議","department":"営業第一部","meeting_date":"2026年5月7日（木）","interdept_requests":[{"from":"営業第一部","to":"マーケティング部","content":"5月28日開催のセキュリティウェビナーへの集客連携"},{"from":"営業第一部","to":"プリセールス部","content":"A社向け技術提案サポートの依頼"},{"from":"営業第一部","to":"営業企画","content":"中小企業向け標準提案書テンプレート作成の共同作業"},{"from":"営業第一部","to":"経営企画","content":"A社案件受注時の実装支援費用（予算200万円）の事前承認申請"}],"tasks":[{"title":"A社商談用の導入後サポート強化提案資料を作成する","assignee":"田中課長","due_date":"2026/5/20","related_dept":"プリセールス連携"},{"title":"第二課既存顧客リストのアップセル候補を抽出し優先順位付けを実施する","assignee":"鈴木課長","due_date":"2026/5/15","related_dept":"営業企画"},{"title":"保有顧客へのウェビナー集客フォローメールの文面を作成・配信する","assignee":"佐々木","due_date":"2026/5/10","related_dept":"マーケティング部"},{"title":"中小企業向け標準提案書テンプレートの初稿を作成する","assignee":"山本","due_date":"2026/6/30","related_dept":"営業第二部"},{"title":"A社意思決定者との商談に同席し、役員レベルの関係構築を図る","assignee":"中村部長","due_date":"2026/5/31","related_dept":"経営企画"}],"budget":"A社案件受注時の実装支援費用（予算200万円）の事前承認を経営企画に申請予定"},"id":"0"}],"job_id":"al61bhvu7mg1r31ojfngv7fin6cmk1wj","file_id":"al61z2uv2zo10jwdkmpnhtwnd5avc2kj","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:14:47Z","updated_at":"2026-05-10T01:15:02Z","completed_at":"2026-05-10T01:15:02Z","expires_at":"2026-05-13T01:15:02Z","usage":{"total_input_characters":1487,"processed_input_characters":1487,"skipped_characters":0,"output_characters":1552,"vector_bytes":0},"output_file_id":"al61k7z0kmdzm8shwwdpo7140ypra9od"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"オーガニック検索流入の継続的な低下","severity":"高","related_dept":"マーケティング部"},{"item":"ウェビナー集客目標未達によるリードパイプライン不足","severity":"中","related_dept":"マーケティング部・営業部門"}],"decisions":[{"title":"技術ブログの月次更新頻度を週2本に増加","detail":"SEO対策として技術ブログの更新頻度を週1本から週2本に増やす","related_dept":"マーケティング部・コンテンツチーム"},{"title":"Q2 SEM予算20%増額","detail":"Q2のSEM予算を20%増額（+80万円）し、展示会予算から充当する（経営企画に申請）","related_dept":"経営企画部"},{"title":"競合F社対抗TCO比較コンテンツの作成","detail":"競合F社対抗TCO比較コンテンツを6月10日までに作成する","related_dept":"営業第二部"},{"title":"ウェビナー集客強化のための営業部門への協力依頼を正式化","detail":"ウェビナー集客強化のため営業部門への協力依頼を正式化する","related_dept":"営業第一部・営業第二部"}],"meeting_name":"マーケティング部 5月度月次会議","department":"マーケティング部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"マーケティング部","to":"営業第一部","content":"ウェビナー集客支援（既存顧客へのフォロー強化）"},{"from":"マーケティング部","to":"営業第二部","content":"競合F社対抗コンテンツの共同作成"},{"from":"マーケティング部","to":"経営企画部","content":"Q2予算変更申請の提出"},{"from":"マーケティング部","to":"プロダクト部門","content":"製品情報・ロードマップの提供依頼"}],"tasks":[{"title":"SEOアルゴリズム対応として技術ブログ更新体制を週2本に増強する計画を策定する","assignee":"高橋課長","due_date":"2026/5/15","related_dept":"コンテンツチーム"},{"title":"5月28日ウェビナーの集客施策（メール・SNS）を実施しターゲット50名を達成する","assignee":"中島","due_date":"2026/5/28","related_dept":"営業第一部"},{"title":"競合F社との差別化を示すTCO比較表と導入事例コンテンツを作成する","assignee":"渡辺課長","due_date":"2026/6/10","related_dept":"営業第二部"},{"title":"Q2予算変更申請書を経営企画に提出する","assignee":"伊藤部長","due_date":"2026/5/14","related_dept":"経営企画部"},{"title":"ブランドガイドラインの2026年改訂版ドラフトを作成する","assignee":"福田","due_date":"2026/6/30","related_dept":"全部門"}],"budget":"Q2 SEM予算増額申請：+80万円（展示会予算からの振替）"},"id":"0"}],"job_id":"al61irohvapzmh1orog1aelp3m3gve98","file_id":"al61whii687y18ybo1y66t73v76p185r","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:15:22Z","updated_at":"2026-05-10T01:15:37Z","completed_at":"2026-05-10T01:15:37Z","expires_at":"2026-05-13T01:15:37Z","usage":{"total_input_characters":1535,"processed_input_characters":1535,"skipped_characters":0,"output_characters":1551,"vector_bytes":0},"output_file_id":"al61do8lyllz51sz99wdp8fodsxb8joh"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"高度カスタマイズ要望への対応遅れによる大手顧客チャーン","severity":"高","related_dept":"CS部・製品開発部"},{"item":"オンボーディング完了率低下による早期チャーンリスク","severity":"中","related_dept":"CS部"}],"decisions":[{"title":"セルフサービスガイドの拡充","detail":"オンボーディング30日完了率を85%に改善するためセルフサービスガイドを拡充する","related_dept":"CS部・製品開発部"},{"title":"G社拡張提案の主導を営業第二部に依頼","detail":"G社の拡張提案は営業第二部が主導し、CSはサポートに回る","related_dept":"営業第二部"},{"title":"英語版ヘルプコンテンツの整備","detail":"英語版ヘルプコンテンツの整備を6月末までに完了する","related_dept":"マーケティング部"},{"title":"製品フィードバックの正式共有","detail":"製品フィードバックのv3.3要望を製品開発部門に正式共有する","related_dept":"製品開発部"}],"meeting_name":"カスタマーサクセス部 5月度月次会議","department":"カスタマーサクセス部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"CS部","to":"製品開発部","content":"v3.3要望フィードバックおよびオンボーディングガイド仕様確認"},{"from":"CS部","to":"営業第二部","content":"G社拡張提案の主導依頼"},{"from":"CS部","to":"マーケティング部","content":"英語版コンテンツ制作支援"},{"from":"CS部","to":"データ分析チーム","content":"チャーンリスクスコアリングモデル構築支援"}],"tasks":[{"title":"セルフサービス型オンボーディングガイド（動画5本・資料10点）の制作計画を策定する","assignee":"森","due_date":"2026/5/20","related_dept":"製品開発部（仕様確認）"},{"title":"G社拡張提案の顧客ニーズヒアリングシートを作成し営業第二部に共有する","assignee":"村上課長","due_date":"2026/5/15","related_dept":"営業第二部"},{"title":"英語版ヘルプコンテンツの優先度リスト（TOP20）を作成しコンテンツ制作を開始する","assignee":"池田","due_date":"2026/6/30","related_dept":"マーケティング部"},{"title":"SMB顧客向けチャーンリスクスコアリングモデルの試作版を作成する","assignee":"清水課長","due_date":"2026/6/30","related_dept":"データ分析チーム"},{"title":"製品開発部門へのv3.3要望トップ5を正式にフィードバックする","assignee":"林部長","due_date":"2026/5/12","related_dept":"製品開発部"}],"budget":"英語版ヘルプコンテンツ制作費用（外部翻訳会社発注予定：概算120万円）"},"id":"0"}],"job_id":"al61o8v6j0819avsuri3y06121r35qs9","file_id":"al61rzpzasty4zc27ba61i6zygt3qs55","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:15:58Z","updated_at":"2026-05-10T01:16:18Z","completed_at":"2026-05-10T01:16:18Z","expires_at":"2026-05-13T01:16:18Z","usage":{"total_input_characters":1602,"processed_input_characters":1602,"skipped_characters":0,"output_characters":1543,"vector_bytes":0},"output_file_id":"al61j7rju8zq8lghrw4f054fdt65rjhl"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"スピアフィッシング攻撃によるエグゼクティブアカウント侵害","severity":"高","related_dept":"IT部・経営層"},{"item":"パートナーポータル構築遅延による営業活動への影響","severity":"中","related_dept":"IT部・営業第二部"}],"decisions":[{"title":"サーバー定期メンテナンスの実施","detail":"5月末にサーバー定期メンテナンスを実施する。影響範囲を全部門に事前通知する。","related_dept":"全部門"},{"title":"全社員向けセキュリティ研修の実施","detail":"7月に全社員向けセキュリティ研修を実施する。人事部と連携して進める。","related_dept":"人事部"},{"title":"パートナーリセラーポータルにクラウドSaaS型を採用","detail":"クラウドSaaS型ポータルを採用し、要件定義書を5月末までに作成する。費用概算は年間500万円。","related_dept":"営業第二部"},{"title":"人事部の勤怠管理RPA化を6月から開始","detail":"次フェーズとして人事部の勤怠管理自動化を6月から開始する。","related_dept":"人事部"}],"meeting_name":"IT・情報システム部 5月度月次会議","department":"IT・情報システム部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"IT・情報システム部","to":"営業第二部","content":"パートナーリセラーポータル要件定義の連携"},{"from":"IT・情報システム部","to":"人事部","content":"セキュリティ研修実施および勤怠管理RPA化の連携"},{"from":"IT・情報システム部","to":"経営層","content":"スピアフィッシング対策MFA義務化の承認依頼"},{"from":"IT・情報システム部","to":"全部門","content":"サーバーメンテナンスの事前通知と影響確認"}],"tasks":[{"title":"エグゼクティブ層向けスピアフィッシング対策（メールフィルター強化・MFA義務化）を実施する","assignee":"矢野","due_date":"2026/5/31","related_dept":"経営企画・人事部"},{"title":"5月末サーバーメンテナンスの実施計画と影響範囲を全部門に通知する","assignee":"坂本課長","due_date":"2026/5/15","related_dept":"全部門"},{"title":"パートナーリセラーポータルの要件定義書を作成する","assignee":"菊池課長","due_date":"2026/5/31","related_dept":"営業第二部"},{"title":"人事部の勤怠管理RPA化の要件ヒアリングを実施しスコープを確定する","assignee":"川口","due_date":"2026/5/20","related_dept":"人事部"},{"title":"全社セキュリティ研修の実施計画書を作成し人事部と調整する","assignee":"西村部長","due_date":"2026/5/20","related_dept":"人事部"}],"budget":"パートナーリセラーポータル構築費用（SaaS利用料：年間500万円）の予算申請を経営企画に提出予定"},"id":"0"}],"job_id":"al61rpzmeckvraoo5h2tuad7onka1ur8","file_id":"al61d0dylm2ab5y4mulkkmea90zxvnqj","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:16:40Z","updated_at":"2026-05-10T01:16:58Z","completed_at":"2026-05-10T01:16:58Z","expires_at":"2026-05-13T01:16:58Z","usage":{"total_input_characters":1567,"processed_input_characters":1567,"skipped_characters":0,"output_characters":1589,"vector_bytes":0},"output_file_id":"al61m924cxlbvo27ddnkprs3m4e9fet2"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"v3.2のパフォーマンステスト課題によるリリース遅延","severity":"中","related_dept":"製品開発部・QA"},{"item":"技術的負債解消のためのエンジニアリソース不足","severity":"高","related_dept":"製品開発部・人事部"},{"item":"AI機能競合優位の喪失","severity":"中","related_dept":"製品開発部・経営企画"}],"decisions":[{"title":"v3.2を6月15日にリリース（スケジュール維持）","detail":"コア機能実装完了・QA進捗90%を踏まえ、6月15日リリース予定を維持することを確認。","related_dept":"製品開発部・QA"},{"title":"v3.3ロードマップに一括データエクスポートとマルチテナント対応を最優先で組み込む","detail":"CS部門から収集した顧客フィードバックTOP5を基に、最多要望2件をv3.3に優先組み込みすることで合意。","related_dept":"製品開発部・CS部門・営業部門"},{"title":"Q2後半から認証モジュール再設計を開始する","detail":"技術的負債解消のため、Q2後半から並行して設計作業を開始する計画を決定。","related_dept":"製品開発部・IT部門"},{"title":"AI自動レポート生成機能をv4.0の開発候補として調査フェーズを開始する","detail":"競合各社のAI機能動向を踏まえ、v4.0（来年Q1予定）に向けて調査フェーズを開始することを決定。","related_dept":"製品開発部・経営企画"}],"meeting_name":"製品開発部 5月度月次会議","department":"製品開発部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"製品開発部","to":"CS部門","content":"顧客フィードバックの継続的な収集と共有依頼"},{"from":"製品開発部","to":"営業部門","content":"v3.3ロードマップへの顧客要望優先度フィードバック依頼"},{"from":"製品開発部","to":"人事部","content":"追加エンジニア採用支援依頼"},{"from":"製品開発部","to":"IT部門","content":"認証モジュール再設計のインフラ要件確認"}],"tasks":[{"title":"v3.2の残QAタスク（パフォーマンステスト2件）を完了しリリース判定会議を開催する","assignee":"竹内","due_date":"2026/6/10","related_dept":"岡田課長（エンジニアリング）"},{"title":"v3.3ロードマップ（一括エクスポート・マルチテナント）の詳細仕様書を作成する","assignee":"斎藤課長","due_date":"2026/6/15","related_dept":"CS部門・営業部門"},{"title":"認証モジュール再設計の技術仕様書と工数見積もりを作成する","assignee":"岡田課長","due_date":"2026/6/30","related_dept":"IT部門"},{"title":"技術的負債解消用の追加エンジニア採用または外注について人事部に相談する","assignee":"木村部長","due_date":"2026/5/20","related_dept":"人事部"},{"title":"一括データエクスポート機能のUXプロトタイプを作成しユーザーテストを計画する","assignee":"長谷川","due_date":"2026/6/30","related_dept":"CS部門"}],"budget":"技術的負債解消用追加エンジニア費用（外注の場合：概算600万円/年、人事部と調整中）"},"id":"0"}],"job_id":"al619dpi7u1pw3ym7kkng8re25ssmm3d","file_id":"al61dfae3v9a1xoe5k153mfgjz14uxjj","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:17:22Z","updated_at":"2026-05-10T01:17:39Z","completed_at":"2026-05-10T01:17:39Z","expires_at":"2026-05-13T01:17:39Z","usage":{"total_input_characters":1582,"processed_input_characters":1582,"skipped_characters":0,"output_characters":1752,"vector_bytes":0},"output_file_id":"al61q1ha5jlo6gxjuevaqsu5pknpgoh7"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"エンジニア採用未達による製品開発遅延","severity":"高","related_dept":"人事部・製品開発部"},{"item":"評価制度改訂への社員の抵抗・混乱","severity":"中","related_dept":"人事部・全部門"}],"decisions":[{"title":"採用エージェント2社の追加","detail":"エンジニア採用を強化するため採用エージェント2社を追加する","related_dept":"製品開発部"},{"title":"全社セキュリティ研修の共同実施","detail":"全社セキュリティ研修を7月にIT部門と共同で実施する","related_dept":"IT部門"},{"title":"OKR評価制度の導入可否決定","detail":"OKR評価制度の導入可否を7月末の役員会で決定する","related_dept":"経営企画部・全部門"},{"title":"勤怠管理RPA化の要件ヒアリング開始","detail":"勤怠管理RPA化の要件ヒアリングを6月から開始する","related_dept":"IT部門"}],"meeting_name":"人事部 5月度月次会議","department":"人事部","meeting_date":"2026年5月7日（木）13:00〜14:30","interdept_requests":[{"from":"人事部","to":"製品開発部","content":"エンジニア採用要件の詳細共有依頼"},{"from":"人事部","to":"IT部門","content":"セキュリティ研修の共同企画および勤怠管理RPA化連携"},{"from":"人事部","to":"経営企画部","content":"評価制度改訂・採用費用の予算承認"},{"from":"人事部","to":"全部門","content":"評価制度改訂の事前説明と合意形成"}],"tasks":[{"title":"エンジニア採用強化のため採用エージェント2社との契約を締結する","assignee":"石川課長","due_date":"2026/5/31","related_dept":"製品開発部"},{"title":"7月全社セキュリティ研修のカリキュラム設計をIT部門と共同で実施する","assignee":"藤井","due_date":"2026/6/15","related_dept":"IT部門"},{"title":"OKR評価制度導入の詳細提案書を経営企画と連携して作成する","assignee":"岩本","due_date":"2026/6/30","related_dept":"経営企画部"},{"title":"勤怠管理RPA化の要件ヒアリングスケジュールをIT部門と調整する","assignee":"前田課長","due_date":"2026/5/20","related_dept":"IT部門"},{"title":"採用エージェント追加費用の予算申請書を経営企画に提出する","assignee":"大野部長","due_date":"2026/5/14","related_dept":"経営企画部"}],"budget":"採用エージェント追加費用：年間200万円（経営企画に申請予定）"},"id":"0"}],"job_id":"al61jkiik6j1sm94chktan021ou22uy3","file_id":"al610iu0nigszw0ich421v0fvvhote13","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:17:58Z","updated_at":"2026-05-10T01:18:18Z","completed_at":"2026-05-10T01:18:17Z","expires_at":"2026-05-13T01:18:17Z","usage":{"total_input_characters":1404,"processed_input_characters":1404,"skipped_characters":0,"output_characters":1457,"vector_bytes":0},"output_file_id":"al61jmuak3pvy45nvgxkhkdw66c1244x"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"採用費・研修費の想定外超過による通期利益への影響","severity":"中","related_dept":"財務部・人事部・経営企画"},{"item":"M&A関連費用の増加による財務計画の狂い","severity":"高","related_dept":"財務部・経営企画"}],"decisions":[{"title":"採用費超過の現状維持","detail":"採用費超過については経営企画の承認のもと現状維持とする","related_dept":"経営企画部"},{"title":"オフィス関連費用削減の協議","detail":"オフィス関連費用削減の可能性を総務部と6月末までに協議する","related_dept":"総務部"},{"title":"6月会計監査準備の完了","detail":"6月会計監査に向けた必要書類の準備を5月末までに完了する","related_dept":"全部門"}],"meeting_name":"財務・経理部 5月度月次会議","department":"財務・経理部","meeting_date":"2026年5月7日（木）","interdept_requests":[{"from":"財務・経理部","to":"経営企画部","content":"予算超過の承認および中期財務計画の整合確認"},{"from":"財務・経理部","to":"IT部門","content":"RPA効果測定データ共有依頼"},{"from":"財務・経理部","to":"人事部","content":"採用費予算超過の詳細説明依頼"},{"from":"財務・経理部","to":"総務部","content":"オフィス費用削減の協議"},{"from":"財務・経理部","to":"全部門","content":"会計監査準備書類の提出依頼"}],"tasks":[{"title":"請求書処理RPA稼働後の効果測定レポートを作成する","assignee":"小島","due_date":"2026/5/20","related_dept":"IT部門"},{"title":"Q2詳細キャッシュフロー計画書を更新し経営企画に提出する","assignee":"堀川課長","due_date":"2026/5/15","related_dept":"経営企画部"},{"title":"全社オフィス関連費用の現状分析と削減ポテンシャルをまとめる","assignee":"武田","due_date":"2026/5/31","related_dept":"総務部"},{"title":"6月会計監査用の必要書類リストを作成し各部門に準備依頼を発出する","assignee":"宮本部長","due_date":"2026/5/14","related_dept":"全部門"},{"title":"H社M&A費用の会計処理方針を監査法人と最終確認する","assignee":"近藤CFO","due_date":"2026/5/20","related_dept":"経営企画部"}],"budget":"会計監査関連費用（監査法人報酬）：年間1,200万円（計画内）"},"id":"0"}],"job_id":"al61exg4ck9tbcyuboxbiu84ty8ha4pq","file_id":"al616ufo2vx0tboqfn5krdgurv270vl2","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:18:42Z","updated_at":"2026-05-10T01:18:56Z","completed_at":"2026-05-10T01:18:56Z","expires_at":"2026-05-13T01:18:56Z","usage":{"total_input_characters":1435,"processed_input_characters":1435,"skipped_characters":0,"output_characters":1400,"vector_bytes":0},"output_file_id":"al61ynp1pb33eg3hlnl7xzrlkyvb99gx"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"M&A案件の統合コスト超過による財務悪化","severity":"高","related_dept":"経営企画・CFO"},{"item":"AI競合激化による中期計画の前提崩れ","severity":"高","related_dept":"経営企画・製品開発部"},{"item":"先行投資増加による短期的な利益圧迫","severity":"中","related_dept":"経営企画・全部門"}],"decisions":[{"title":"Q1通期計画の継続推進","detail":"Q1業績は売上が計画を上回る。通期計画を変更せず推進する。","related_dept":"経営企画部・CFO"},{"title":"予算変更申請の承認","detail":"マーケティング部（SEM+80万円）、IT部門（ポータル構築500万円・来期繰越）、人事部（採用エージェント200万円）の予算変更申請を承認。","related_dept":"マーケティング部・IT部門・人事部"},{"title":"M&A候補H社の方向性を7月役員会で決定","detail":"初期デューデリジェンス完了。企業価値15〜20億円と試算。7月の役員会で方向性を決定する。","related_dept":"経営企画部・CFO"},{"title":"中期経営計画修正のため6月に全部門ヒアリングを実施","detail":"AI機能強化・競合環境の変化を踏まえた中期経営計画（2026-2028）修正のため、6月に全部門ヒアリングを実施し、7月末に取締役会へ改訂版を提出する。","related_dept":"全部門"}],"meeting_name":"経営企画部 5月度月次会議","department":"経営企画部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"経営企画部","to":"全部門","content":"中期経営計画修正のためのヒアリングを6月に実施（スケジュール調整依頼）"},{"from":"経営企画部","to":"製品開発部","content":"AI機能ロードマップの詳細共有依頼"},{"from":"経営企画部","to":"マーケティング部・IT部・人事部","content":"予算変更の実行状況報告依頼"}],"tasks":[{"title":"マーケ・IT・人事の予算変更を反映した修正予算書を作成する","assignee":"白石","due_date":"2026/5/15","related_dept":"各部門"},{"title":"M&A候補H社のIRへの影響シナリオ分析を作成する","assignee":"黒田","due_date":"2026/6/30","related_dept":"CFO"},{"title":"中期経営計画修正のための全部門ヒアリングスケジュールを策定する","assignee":"山田部長","due_date":"2026/5/20","related_dept":"全部門"},{"title":"Q1決算説明資料を作成しIR向け開示準備を行う","assignee":"近藤CFO","due_date":"2026/5/20","related_dept":"IR担当"},{"title":"H社デューデリジェンス詳細報告書を役員会用に仕上げる","assignee":"山田部長","due_date":"2026/6/30","related_dept":"CFO・社長"}],"budget":"H社M&A初期調査費用（法務・財務DD）：実績800万円を既存予備費から充当済み。マーケティング部SEM費+80万円、IT部門ポータル構築500万円（来期繰越）、人事部採用エージェント200万円の予算変更申請を承認。"},"id":"0"}],"job_id":"al61z2sxo1bl8hkr0xx4ar3a4eek23i7","file_id":"al616nfjocfgx277647crzd5kziah2q2","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:19:18Z","updated_at":"2026-05-10T01:19:39Z","completed_at":"2026-05-10T01:19:34Z","expires_at":"2026-05-13T01:19:34Z","usage":{"total_input_characters":1461,"processed_input_characters":1461,"skipped_characters":0,"output_characters":1682,"vector_bytes":0},"output_file_id":"al618y8beb49me16staomefxcbo6efbz"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"H社M&A後の特許係争リスクの顕在化","severity":"高","related_dept":"法務部・経営企画"},{"item":"AI利用ルール未整備による情報漏洩リスク","severity":"高","related_dept":"法務部・IT部・全部門"},{"item":"メール配信における同意管理の不備","severity":"中","related_dept":"法務部・マーケティング部"}],"decisions":[{"title":"C社・D社代理店契約を標準条件で締結","detail":"5月末までに標準条件での締結を完了する","related_dept":"営業第二部"},{"title":"マーケティング部のメール配信リスト管理改善勧告","detail":"6月末までに改善対応を求める勧告を発出する","related_dept":"マーケティング部"},{"title":"AI利用コンプライアンスガイドラインのドラフト作成","detail":"6月末までにドラフトを作成する","related_dept":"IT部門・経営企画部"},{"title":"H社法的リスク評価書の提出","detail":"7月役員会に向けて法的リスク評価書を提出する","related_dept":"経営企画部"}],"meeting_name":"法務・コンプライアンス部 5月度月次会議","department":"法務・コンプライアンス部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"法務・コンプライアンス部","to":"営業第二部","content":"C社・D社代理店契約締結の連携"},{"from":"法務・コンプライアンス部","to":"マーケティング部","content":"メール配信リスト管理改善勧告への対応"},{"from":"法務・コンプライアンス部","to":"IT部門・経営企画部","content":"AI利用コンプライアンスガイドライン共同策定"},{"from":"法務・コンプライアンス部","to":"経営企画部","content":"H社法的リスク評価の共有"}],"tasks":[{"title":"C社・D社代理店契約書の最終確認と締結手続きを完了する","assignee":"今井課長","due_date":"2026/5/31","related_dept":"営業第二部"},{"title":"マーケティング部へのメール配信リスト管理改善勧告書を発出する","assignee":"上野","due_date":"2026/5/15","related_dept":"マーケティング部"},{"title":"AI利用コンプライアンスガイドラインのドラフトを作成する","assignee":"荒木課長","due_date":"2026/6/30","related_dept":"IT部門・経営企画部"},{"title":"H社の特許係争詳細調査と法的リスク評価を実施する","assignee":"田村","due_date":"2026/6/30","related_dept":"経営企画部"},{"title":"AI利用ガイドライン策定のキックオフ会議を設定する","assignee":"松田部長","due_date":"2026/5/20","related_dept":"IT部門・経営企画部"}],"budget":"外部弁護士費用（H社DD対応）：追加50万円の承認を経営企画に申請予定"},"id":"0"}],"job_id":"al61m57xmbm655j5u911uyg89p7r62k1","file_id":"al61jj7734d2kma2vxe6z0a8dmhck8lr","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:19:58Z","updated_at":"2026-05-10T01:20:17Z","completed_at":"2026-05-10T01:20:17Z","expires_at":"2026-05-13T01:20:17Z","usage":{"total_input_characters":1540,"processed_input_characters":1540,"skipped_characters":0,"output_characters":1577,"vector_bytes":0},"output_file_id":"al61tqdlt7lfsigsqe70xoklmvgo422w"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"DWH移行の遅延による各部門のデータ分析停滞","severity":"中","related_dept":"データ分析部・全部門"},{"item":"チャーンリスクモデルの精度不足による誤った優先順位付け","severity":"中","related_dept":"データ分析部・CS部"}],"decisions":[{"title":"DWH移行完了とBIダッシュボードリリース","detail":"DWH移行を6月末に完了し、7月からBIダッシュボードをリリースする","related_dept":"データ分析部・全部門"},{"title":"CSチャーンリスクモデル提供","detail":"CSチャーンリスクモデルを6月末にCS部門へ提供する","related_dept":"データ分析部・CS部門"},{"title":"経営ダッシュボード開発","detail":"経営ダッシュボードを8月リリース目標で開発を進める","related_dept":"データ分析部・経営企画部"},{"title":"SEO効果測定基盤リリース","detail":"マーケティング向けSEO効果測定基盤を6月末にリリースする","related_dept":"データ分析部・マーケティング部"}],"meeting_name":"データ分析部 5月度月次会議","department":"データ分析部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"データ分析部","to":"CS部門","content":"チャーンリスクモデルの組み込みおよびフィードバック"},{"from":"データ分析部","to":"経営企画部","content":"経営ダッシュボードの要件と優先KPI定義"},{"from":"データ分析部","to":"マーケティング部","content":"SEO効果測定基盤の要件確認とレビュー"},{"from":"データ分析部","to":"IT部門","content":"DWH移行インフラ支援およびモデル組み込み支援"},{"from":"データ分析部","to":"全部門","content":"BIダッシュボード要件ヒアリング"}],"tasks":[{"title":"営業データのETL処理最適化を完了しDWH移行を終了させる","assignee":"安田課長","due_date":"2026/6/30","related_dept":"IT部門"},{"title":"チャーンリスクモデルをCS部門システムに組み込む実装を完了する","assignee":"神田","due_date":"2026/6/30","related_dept":"CS部門・IT部門"},{"title":"経営ダッシュボードのデータソース接続設計書を作成する","assignee":"宮崎","due_date":"2026/5/31","related_dept":"経営企画部"},{"title":"各部門向けBIダッシュボードの要件ヒアリングを実施する","assignee":"辻課長","due_date":"2026/6/15","related_dept":"全部門"},{"title":"マーケティング向けSEO効果測定基盤のプロトタイプをマーケティング部と共同でレビューする","assignee":"桑原部長","due_date":"2026/5/31","related_dept":"マーケティング部"}],"budget":"BIダッシュボードツール費用：年間480万円（ライセンス更新）は計画内"},"id":"0"}],"job_id":"al618dkwga67jxfk83bk1nfg5xkbmqo4","file_id":"al61u6lpag1gr563dvy6zode8pw5qo1l","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:20:39Z","updated_at":"2026-05-10T01:20:52Z","completed_at":"2026-05-10T01:20:52Z","expires_at":"2026-05-13T01:20:52Z","usage":{"total_input_characters":1549,"processed_input_characters":1549,"skipped_characters":0,"output_characters":1601,"vector_bytes":0},"output_file_id":"al61kq96x49ceoj9ej0k1trbl89rkrf9"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"オフィス縮小移転の意思決定遅延による賃料超過負担","severity":"中","related_dept":"総務部・経営企画・財務部"},{"item":"フリーアドレス化後の執務環境への社員不満増加","severity":"低","related_dept":"総務部"}],"decisions":[{"title":"第2フロアのフリーアドレス化完了","detail":"第2フロアのフリーアドレス化を5月末までに完了する","related_dept":"総務部・IT部門"},{"title":"リモートワーク備品支給上限基準の改訂","detail":"リモートワーク備品支給の上限基準を改訂し6月から適用する","related_dept":"全部門・人事部"},{"title":"オフィス縮小・移転検討の開始","detail":"2027年3月のオフィス更新に向けた縮小・移転検討を経営企画と開始する","related_dept":"経営企画部・財務部"},{"title":"社内コミュニケーション改善策の策定","detail":"社内コミュニケーション改善策を人事部と連携して策定する","related_dept":"人事部"}],"meeting_name":"総務部 5月度月次会議","department":"総務部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"総務部","to":"IT部門","content":"座席予約システム導入およびフリーアドレス運用支援"},{"from":"総務部","to":"財務部・経営企画部","content":"オフィス縮小・移転コスト試算および意思決定"},{"from":"総務部","to":"人事部","content":"社内コミュニケーション改善策の共同策定・備品支給基準改訂の連携"},{"from":"総務部","to":"全部門","content":"リモートワーク備品支給基準改訂の通知と適用"}],"tasks":[{"title":"第2フロアフリーアドレス化の最終工事と座席予約システム導入をIT部門と調整する","assignee":"野口課長","due_date":"2026/5/31","related_dept":"IT部門"},{"title":"リモートワーク備品支給基準の改訂版を作成し全社に通知する","assignee":"若松","due_date":"2026/5/20","related_dept":"全部門・人事部"},{"title":"2027年3月オフィス更新に向けた縮小・移転シミュレーションを財務部・経営企画と開始する","assignee":"青木部長","due_date":"2026/6/30","related_dept":"財務部・経営企画部"},{"title":"社内コミュニケーション改善策の提案書を人事部と共同で作成する","assignee":"中野課長","due_date":"2026/6/30","related_dept":"人事部"},{"title":"フリーアドレス化後の利用状況モニタリング計画を策定する","assignee":"阿部","due_date":"2026/5/31","related_dept":"IT部門"}],"budget":"オフィス縮小・移転検討に伴う不動産コンサル費用：概算100万円（経営企画と調整中）。現在の月額賃料3,200万円が最大コスト。"},"id":"0"}],"job_id":"al614ha8ehwh0u3pude0gvrq7ocifafi","file_id":"al61nzrjoihru2cbkytc3wr07xgzboya","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:21:15Z","updated_at":"2026-05-10T01:21:30Z","completed_at":"2026-05-10T01:21:30Z","expires_at":"2026-05-13T01:21:30Z","usage":{"total_input_characters":1510,"processed_input_characters":1510,"skipped_characters":0,"output_characters":1549,"vector_bytes":0},"output_file_id":"al61vfn8sph556uk1znkl816osokt2ac"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"A社技術提案の品質不足による商談失敗リスク","severity":"高","related_dept":"プリセールス部・営業第一部"},{"item":"デモ環境の不足によるウェビナー来場者への印象悪化","severity":"中","related_dept":"プリセールス部・マーケティング部"}],"decisions":[{"title":"A社技術提案の完成と事前確認","detail":"A社技術提案を5月20日までに完成させ、営業第一部との事前確認を行う","related_dept":"営業第一部"},{"title":"ウェビナー向け製造業デモシナリオの作成","detail":"ウェビナー向け製造業デモシナリオを5月25日までに作成する","related_dept":"マーケティング部"},{"title":"提案書標準テンプレートの完成と展開","detail":"提案書標準テンプレートを6月末までに完成させ全営業部門に展開する","related_dept":"営業第一部・第二部"}],"meeting_name":"プリセールス部 5月度月次会議","department":"プリセールス部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"プリセールス部","to":"営業第一部","content":"A社商談に向けた技術提案の連携および事前確認"},{"from":"プリセールス部","to":"製品開発部","content":"v3.3ロードマップとA社要件の整合確認"},{"from":"プリセールス部","to":"マーケティング部","content":"ウェビナーデモコンテンツの共同作成"},{"from":"プリセールス部","to":"営業第一部・第二部","content":"提案書標準テンプレートの展開と使用開始"}],"tasks":[{"title":"A社向け技術提案書（セキュリティ・マルチテナント対応）を作成する","assignee":"内田","due_date":"2026/5/20","related_dept":"営業第一部・製品開発部"},{"title":"製造業向けウェビナーデモシナリオとデモ環境を整備する","assignee":"広瀬課長","due_date":"2026/5/25","related_dept":"マーケティング部"},{"title":"提案書標準テンプレートセット（5種→2種に統合）を作成する","assignee":"浜田","due_date":"2026/6/30","related_dept":"営業第一部・第二部"},{"title":"提案勝率向上のための敗因分析レポートを作成する","assignee":"工藤課長","due_date":"2026/5/31","related_dept":"営業部門"},{"title":"製品開発部門のv3.3ロードマップとの整合確認をする","assignee":"原部長","due_date":"2026/5/15","related_dept":"製品開発部"}],"budget":"外部技術検証環境（クラウド費用）：月額30万円（計画内）"},"id":"0"}],"job_id":"al61m44zeypqgbpaobmfykjfwt6j0ir1","file_id":"al61z1g8io3dpf6zvlxk4186pez7l4ib","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:21:56Z","updated_at":"2026-05-10T01:22:17Z","completed_at":"2026-05-10T01:22:16Z","expires_at":"2026-05-13T01:22:16Z","usage":{"total_input_characters":1483,"processed_input_characters":1483,"skipped_characters":0,"output_characters":1434,"vector_bytes":0},"output_file_id":"al61h3t7g82a5j317ug8yjr24n4cy5ob"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"法令違反（CAN-SPAM・CASL）によるレピュテーションリスク","severity":"高","related_dept":"海外事業部・法務部"},{"item":"英語サポート不足による海外顧客チャーン","severity":"中","related_dept":"海外事業部・CS部"},{"item":"インド市場参入の判断遅延による機会損失","severity":"中","related_dept":"海外事業部・経営企画"}],"decisions":[{"title":"北米コールドメール施策の再開","detail":"法務確認完了後にコールドメール施策を再開する","related_dept":"法務部"},{"title":"インド市場参入の方向性決定","detail":"経営企画と協議して6月末までに方向性を決定する","related_dept":"経営企画部"},{"title":"海外向け英語サポート体制の強化","detail":"CS部門・人事部と共同で検討する","related_dept":"CS部門・人事部"}],"meeting_name":"海外事業部 5月度月次会議","department":"海外事業部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"海外事業部","to":"法務部","content":"北米コールドメール施策（CAN-SPAM・CASL）の法令確認および現地法人設立検討"},{"from":"海外事業部","to":"経営企画部","content":"インド市場参入・現地法人設立の戦略的意思決定の協議"},{"from":"海外事業部","to":"CS部門","content":"英語サポート体制強化の共同検討・提案書作成"},{"from":"海外事業部","to":"人事部","content":"グローバル対応人材の配置・採用支援の共同検討"},{"from":"海外事業部","to":"マーケティング部","content":"欧州展開向けコンテンツ・イベント支援"}],"tasks":[{"title":"法務部からの法令対応確認完了後にコールドメール施策を再開する","assignee":"金子課長","due_date":"2026/6/1","related_dept":"法務部"},{"title":"インド市場参入の事前調査レポートを作成し経営企画に提出する","assignee":"柳課長","due_date":"2026/6/15","related_dept":"経営企画部"},{"title":"欧州新規開拓の強化策（パートナー拡充・イベント参加）を計画書にまとめる","assignee":"市川","due_date":"2026/5/31","related_dept":"マーケティング部"},{"title":"グローバルサポート体制強化の提案書をCS部門・人事部と共同作成する","assignee":"千葉","due_date":"2026/5/31","related_dept":"CS部門・人事部"},{"title":"APAC現地法人設立の検討を経営企画・法務部と開始する","assignee":"大塚部長","due_date":"2026/6/1","related_dept":"経営企画部・法務部"}],"budget":"インド市場参入調査費用：概算150万円（経営企画に申請予定）"},"id":"0"}],"job_id":"al61ylt8zy8jg57o4ts7ltktj66hamdf","file_id":"al61q8j9sjju7bte84vogoqqkjoy33w9","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:22:38Z","updated_at":"2026-05-10T01:22:52Z","completed_at":"2026-05-10T01:22:52Z","expires_at":"2026-05-13T01:22:52Z","usage":{"total_input_characters":1568,"processed_input_characters":1568,"skipped_characters":0,"output_characters":1542,"vector_bytes":0},"output_file_id":"al61tcltf018s58zlggsksjm5odd666h"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"v3.2リリース後の問い合わせ急増によるサポートキャパシティ超過","severity":"高","related_dept":"サポート部・製品開発部"},{"item":"英語対応リソース不足による海外顧客満足度低下","severity":"中","related_dept":"サポート部・CS部・海外事業部"}],"decisions":[{"title":"v3.2リリースに向けたサポートスクリプト作成","detail":"v3.2リリースに向けたサポートスクリプトを5月末までに作成する","related_dept":"製品開発部"},{"title":"AIチャットボット導入PoCのQ3実施","detail":"AIチャットボット導入の概念実証（PoC）をQ3に実施する","related_dept":"IT部門"},{"title":"ナレッジベースの月20本ペース拡充","detail":"ナレッジベースを月20本ペースで拡充し自己解決率を向上させる","related_dept":"サポート部"},{"title":"英語版ナレッジベース整備のCS部門連携","detail":"英語版ナレッジベースの整備をCS部門と連携して進める","related_dept":"CS部門"}],"meeting_name":"サポート・ヘルプデスク部 5月度月次会議","department":"サポート・ヘルプデスク部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"サポート・ヘルプデスク部","to":"製品開発部","content":"v3.2技術情報共有およびv3.1バグ関連問い合わせTOP10のフィードバック"},{"from":"サポート・ヘルプデスク部","to":"CS部門","content":"英語版コンテンツ整備の連携"},{"from":"サポート・ヘルプデスク部","to":"IT部門","content":"AIチャットボットPoC共同実施"},{"from":"サポート・ヘルプデスク部","to":"海外事業部","content":"英語サポート体制強化の連携"}],"tasks":[{"title":"v3.2新機能のサポートスクリプトを製品開発部門の情報を基に作成する","assignee":"浅野","due_date":"2026/5/31","related_dept":"製品開発部"},{"title":"ナレッジベース拡充計画（月20本）の執筆スケジュールを作成する","assignee":"南","due_date":"2026/5/15","related_dept":"CS部門"},{"title":"AIチャットボットPoC計画書をIT部門と共同で作成する","assignee":"星課長","due_date":"2026/6/30","related_dept":"IT部門"},{"title":"v3.1バグ関連問い合わせTOP10を製品開発部門にフィードバックする","assignee":"関課長","due_date":"2026/5/10","related_dept":"製品開発部"},{"title":"英語版ナレッジベース整備の体制をCS部門・海外事業部と協議する","assignee":"久保部長","due_date":"2026/5/20","related_dept":"CS部門・海外事業部"}],"budget":"AIチャットボットPoC費用：概算200万円（Q3予算として申請予定）"},"id":"0"}],"job_id":"al61ma1w2gnjy2grzirt4j0pxaw9qau2","file_id":"al61cg56f2ydmr4rdpebjf4qfoltyvg3","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:23:13Z","updated_at":"2026-05-10T01:23:29Z","completed_at":"2026-05-10T01:23:29Z","expires_at":"2026-05-13T01:23:29Z","usage":{"total_input_characters":1559,"processed_input_characters":1559,"skipped_characters":0,"output_characters":1572,"vector_bytes":0},"output_file_id":"al6148e48jp0spbscehdeo171yxi9ap2"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"エンジニア過負荷による離職リスク","severity":"高","related_dept":"オペレーション部・人事部"},{"item":"要件変更管理不備によるデリバリー遅延の常態化","severity":"中","related_dept":"オペレーション部・プリセールス部"}],"decisions":[{"title":"要件変更管理プロセスの見直し","detail":"要件変更管理プロセスを見直し、変更影響の事前評価フローを導入する","related_dept":"プリセールス部・製品開発部"},{"title":"エンジニア過負荷案件のリソース再配分","detail":"エンジニア過負荷案件3件のリソース再配分を5月中に実施する","related_dept":"人事部"},{"title":"デプロイ自動化PoCの共同実施","detail":"デプロイ自動化PoCをQ3にIT部門と共同実施する","related_dept":"IT部門"}],"meeting_name":"オペレーション部 5月度月次会議","department":"オペレーション部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"オペレーション部","to":"プリセールス部","content":"要件定義精度向上の連携および要件変更プロセス共同設計"},{"from":"オペレーション部","to":"製品開発部","content":"品質課題のフィードバックおよびリソース共有"},{"from":"オペレーション部","to":"IT部門","content":"デプロイ自動化PoCの共同実施"},{"from":"オペレーション部","to":"人事部","content":"エンジニア過負荷・離職リスクへの対応"}],"tasks":[{"title":"要件変更管理の新プロセス（事前影響評価フロー）の設計書を作成する","assignee":"吉川課長","due_date":"2026/5/31","related_dept":"プリセールス部・製品開発部"},{"title":"過負荷3案件のリソース再配分案を作成し部長承認を得る","assignee":"植田","due_date":"2026/5/15","related_dept":"人事部"},{"title":"デプロイ自動化PoCの計画書をIT部門と共同で作成する","assignee":"齋藤課長","due_date":"2026/6/30","related_dept":"IT部門"},{"title":"仕様齟齬の原因分析レポートを作成しプリセールス部・製品開発部に共有する","assignee":"山崎","due_date":"2026/5/31","related_dept":"プリセールス部・製品開発部"},{"title":"エンジニア過負荷問題を人事部と連携してキャリア面談で対応する","assignee":"高田部長","due_date":"2026/5/20","related_dept":"人事部"}],"budget":"デプロイ自動化PoC費用：概算150万円（Q3予算申請予定）"},"id":"0"}],"job_id":"al613qm7ws4o7gbi8vhacr7rd61gc2gh","file_id":"al61hmn6bo93c9ddvszf2g9v4h5niu3x","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:23:49Z","updated_at":"2026-05-10T01:24:04Z","completed_at":"2026-05-10T01:24:02Z","expires_at":"2026-05-13T01:24:02Z","usage":{"total_input_characters":1469,"processed_input_characters":1469,"skipped_characters":0,"output_characters":1428,"vector_bytes":0},"output_file_id":"al6132srhejxfwfj0xohyyl9jmnqxx1x"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"パフォーマンス課題未解決によるv3.2リリース遅延","severity":"高","related_dept":"QA部・製品開発部"},{"item":"セキュリティ脆弱性の修正漏れによる本番障害","severity":"高","related_dept":"QA部・製品開発部・IT部"}],"decisions":[{"title":"v3.2パフォーマンス課題の解決とリリース判定実施","detail":"v3.2のパフォーマンス課題を5月末までに解決し、リリース判定を6月10日に実施する","related_dept":"QA部・製品開発部・オペレーション部"},{"title":"セキュリティ脆弱性2件の修正","detail":"セキュリティ脆弱性2件を製品開発部門と連携して6月10日までに修正する","related_dept":"QA部・製品開発部"},{"title":"テスト自動化率70%達成","detail":"テスト自動化率をQ3末までに70%に引き上げる","related_dept":"QA部・製品開発部"},{"title":"品質情報共有会議の頻度変更","detail":"製品開発部門との品質情報共有会議を月次から隔週に変更する","related_dept":"QA部・製品開発部"}],"meeting_name":"品質保証部 5月度月次会議","department":"品質保証部","meeting_date":"2026年5月7日（木）09:00〜10:30","interdept_requests":[{"from":"品質保証部","to":"製品開発部","content":"パフォーマンス課題解消・セキュリティ脆弱性修正・品質情報共有の強化（隔週会議の実施）"},{"from":"品質保証部","to":"IT部門","content":"本番同等パフォーマンステスト環境の提供"},{"from":"品質保証部","to":"オペレーション部","content":"リリース判定後のデプロイ連携"}],"tasks":[{"title":"v3.2の高負荷パフォーマンステストを本番同等環境で実施する","assignee":"谷口","due_date":"2026/5/31","related_dept":"IT部門（環境提供）"},{"title":"セキュリティ脆弱性2件の修正確認テストを実施する","assignee":"梅田","due_date":"2026/6/10","related_dept":"製品開発部"},{"title":"テスト自動化強化計画（Q3末70%達成）のロードマップを作成する","assignee":"丸山課長","due_date":"2026/5/31","related_dept":"製品開発部"},{"title":"製品開発部との隔週品質情報共有会議のアジェンダテンプレートを作成する","assignee":"永田課長","due_date":"2026/5/15","related_dept":"製品開発部"},{"title":"v3.2リリース判定会議（6/10）の開催準備と参加者調整を行う","assignee":"三浦部長","due_date":"2026/5/20","related_dept":"製品開発部・オペレーション部"}],"budget":"テスト自動化ツール追加ライセンス費用：年間120万円（Q3予算に計上予定）"},"id":"0"}],"job_id":"al61nujwcg6yz9xwwrwoev3xjxin0o3k","file_id":"al61iu04mpvjk4u6jia4iy4g1hsgcg6d","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:24:24Z","updated_at":"2026-05-10T01:24:40Z","completed_at":"2026-05-10T01:24:39Z","expires_at":"2026-05-13T01:24:39Z","usage":{"total_input_characters":1501,"processed_input_characters":1501,"skipped_characters":0,"output_characters":1520,"vector_bytes":0},"output_file_id":"al61nyx3alawjv0wyoreb6msy09bysf7"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"パートナー上位3社依存によるチャネルリスク","severity":"高","related_dept":"パートナー部・営業第二部"},{"item":"リセラーポータル遅延による新規代理店展開の遅れ","severity":"中","related_dept":"パートナー部・IT部門"}],"decisions":[{"title":"新規代理店の開拓目標を今期中に5社追加","detail":"パートナー集中リスク解消のため新規代理店の開拓目標を今期中に5社追加とする","related_dept":"パートナー部・営業第二部"},{"title":"C社・D社との代理店契約を5月末に締結","detail":"法務部確認が完了しており、5月末に締結予定","related_dept":"法務部・営業第二部"},{"title":"K社セキュリティパートナーシップの交渉を6月末に結論","detail":"K社セキュリティパートナーシップの交渉を6月末に結論を出す","related_dept":"製品開発部"},{"title":"APACインド市場向けパートナー候補を6月末までに選定","detail":"海外事業部と共同で6月末までに選定する","related_dept":"海外事業部"}],"meeting_name":"パートナー・アライアンス部 5月度月次会議","department":"パートナー・アライアンス部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"パートナー・アライアンス部","to":"営業第二部","content":"新規代理店開拓リスト共有・代理店契約締結連携"},{"from":"パートナー・アライアンス部","to":"法務部","content":"代理店契約書の最終確認"},{"from":"パートナー・アライアンス部","to":"IT部門","content":"リセラーポータル整備の進捗確認"},{"from":"パートナー・アライアンス部","to":"製品開発部","content":"K社セキュリティパートナーシップの技術整合確認"},{"from":"パートナー・アライアンス部","to":"海外事業部","content":"APACインド市場向けパートナー選定の共同作業"}],"tasks":[{"title":"新規代理店開拓リスト（候補10社）を作成し営業第二部と共有する","assignee":"柏木課長","due_date":"2026/5/31","related_dept":"営業第二部"},{"title":"C社・D社との代理店契約締結手続きを法務部・営業第二部と連携して完了する","assignee":"沖","due_date":"2026/5/31","related_dept":"法務部・営業第二部"},{"title":"K社セキュリティパートナーシップの条件交渉を進め製品開発部との技術整合を確認する","assignee":"鷹野","due_date":"2026/6/30","related_dept":"製品開発部"},{"title":"APACインド向けパートナー候補調査を海外事業部と共同で実施する","assignee":"春日課長","due_date":"2026/6/30","related_dept":"海外事業部"},{"title":"リセラーポータル完成後のパートナー向けキックオフ説明会の計画を策定する","assignee":"島田部長","due_date":"2026/6/30","related_dept":"IT部門・営業第二部"}],"budget":"K社パートナーシップ締結費用（共同マーケティング費用）：概算300万円（経営企画に申請予定）"},"id":"0"}],"job_id":"al61zujcbq50qxxrm6u25o3hktkydmgn","file_id":"al61t1i2g87nm6frugx9u56fpqn6tewp","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:25:00Z","updated_at":"2026-05-10T01:25:16Z","completed_at":"2026-05-10T01:25:16Z","expires_at":"2026-05-13T01:25:16Z","usage":{"total_input_characters":1655,"processed_input_characters":1655,"skipped_characters":0,"output_characters":1677,"vector_bytes":0},"output_file_id":"al61p9pttlsuzrz3xjldvda03v9tejjy"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"AI機能競合優位の喪失による市場シェア低下","severity":"高","related_dept":"リサーチ部・製品開発部・経営企画"},{"item":"新規事業への過度な経営資源投入による既存事業の弱体化","severity":"中","related_dept":"リサーチ部・経営企画"}],"decisions":[{"title":"AI自動レポート生成PoCの成果を製品開発部門に正式提案する","detail":"LLMを活用した自動レポート生成PoCで精度80%以上を達成し、製品開発部門のv4.0候補機能として正式提案できるレベルに到達","related_dept":"製品開発部"},{"title":"業界特化型AI分析サービスの事業計画書を6月末に経営企画に提出する","detail":"製造業・金融業をターゲットとした市場規模500億円超の新規事業候補として詳細事業計画書を作成・提出","related_dept":"経営企画部"},{"title":"H社シナジー評価レポートを経営企画に6月末までに提出する","detail":"H社の自然言語処理特化の機械学習基盤は自社AI機能強化に高いシナジーあり。統合コスト・知財リスクを勘案した投資対効果分析を含めて提出","related_dept":"経営企画部"},{"title":"市場動向レポートを製品開発部門・経営企画に定期的に共有する体制を構築する","detail":"月次での定期共有体制を製品開発部門・経営企画と合意する","related_dept":"製品開発部・経営企画部"}],"meeting_name":"リサーチ・イノベーション部 5月度月次会議","department":"リサーチ・イノベーション部","meeting_date":"2026年5月8日","interdept_requests":[{"from":"リサーチ・イノベーション部","to":"製品開発部","content":"AI自動レポート生成PoCの正式提案・市場動向レポートの定期共有"},{"from":"リサーチ・イノベーション部","to":"経営企画部","content":"新規事業計画・H社シナジー評価・中期経営計画修正のインプット提供"},{"from":"リサーチ・イノベーション部","to":"マーケティング部","content":"業界特化型サービスの市場調査連携"}],"tasks":[{"title":"AI自動レポート生成PoCの成果報告書を製品開発部門に提出する","assignee":"上原","due_date":"2026/5/20","related_dept":"製品開発部"},{"title":"業界特化型AI分析サービスの詳細事業計画書を作成する","assignee":"成田","due_date":"2026/6/30","related_dept":"経営企画部"},{"title":"競合他社AI機能の最新動向レポートを製品開発部門・経営企画に共有する","assignee":"菅野課長","due_date":"2026/5/20","related_dept":"製品開発部・経営企画部"},{"title":"H社との技術シナジーの詳細評価レポートを経営企画に提出する","assignee":"杉山課長","due_date":"2026/6/30","related_dept":"経営企画部"},{"title":"市場動向レポートの定期共有体制（月次）を製品開発部門・経営企画と合意する","assignee":"藤原部長","due_date":"2026/5/20","related_dept":"製品開発部・経営企画部"}],"budget":"新規事業調査費用（外部リサーチ会社）：概算300万円（経営企画に申請予定）"},"id":"0"}],"job_id":"al6180xubdmxcn4ngwrjpblj8569nks4","file_id":"al61ta7sf1i6utujsr5sqz01iur6vg0h","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:25:36Z","updated_at":"2026-05-10T01:25:52Z","completed_at":"2026-05-10T01:25:52Z","expires_at":"2026-05-13T01:25:52Z","usage":{"total_input_characters":1622,"processed_input_characters":1622,"skipped_characters":0,"output_characters":1680,"vector_bytes":0},"output_file_id":"al61zlywwt5iwe420twlt47iid28zmyq"},{"results":[{"status":"succeeded","output":{"risks":[{"item":"M&A情報の事前漏洩によるIR法令違反リスク","severity":"高","related_dept":"広報・IR部・経営企画・法務部"},{"item":"競合他社のメディア露出増加による認知度格差拡大","severity":"中","related_dept":"広報・IR部・マーケティング部"}],"decisions":[{"title":"技術的差別化アピールのための企画記事を6月に2本作成・配信する","detail":"競合他社の露出増加に対抗するため、自社の技術的差別化をアピールする記事を6月中に2本作成・配信する","related_dept":"製品開発部"},{"title":"Q1決算IRを5月20日に予定通り開示する","detail":"CFOとの連携で5月20日開示に向けて準備を進める","related_dept":"CFO・経営企画部"},{"title":"ブランドガイドライン改訂ドラフトをマーケティング部と連携して6月末に完成させる","detail":"グローバル展開・AI事業強化を反映した更新を行い、6月末にドラフトを完成させる","related_dept":"マーケティング部・海外事業部"},{"title":"M&A関連情報の管理徹底を全部門に周知する","detail":"M&A候補H社に関する情報管理の徹底をCFO・経営企画と確認し、全部門に周知する","related_dept":"経営企画部・法務部"}],"meeting_name":"広報・IR部 5月度月次会議","department":"広報・IR部","meeting_date":"2026年5月7日","interdept_requests":[{"from":"広報・IR部","to":"経営企画部・CFO","content":"Q1決算IR資料の内容確認とM&A情報管理の徹底"},{"from":"広報・IR部","to":"法務部","content":"M&A情報管理・インサイダー取引規制の確認"},{"from":"広報・IR部","to":"製品開発部","content":"技術差別化記事の情報提供"},{"from":"広報・IR部","to":"マーケティング部","content":"SNS・ブランドガイドライン改訂の連携"},{"from":"広報・IR部","to":"海外事業部","content":"グローバルブランド観点でのガイドライン改訂インプット"}],"tasks":[{"title":"技術差別化アピールのための企画記事2本の執筆・掲載交渉を進める","assignee":"古賀課長","due_date":"2026/6/30","related_dept":"製品開発部"},{"title":"Q1決算IR資料を完成させ適時開示の手続きを行う","assignee":"倉田課長","due_date":"2026/5/20","related_dept":"CFO・経営企画部"},{"title":"LinkedIn・技術ブログのKPI改善施策をマーケティング部と共同で策定する","assignee":"西川","due_date":"2026/5/31","related_dept":"マーケティング部"},{"title":"ブランドガイドライン改訂のドラフトをマーケティング部・海外事業部と連携して作成する","assignee":"長谷","due_date":"2026/6/30","related_dept":"マーケティング部・海外事業部"},{"title":"M&A情報管理の社内周知文を経営企画・法務部と連携して発出する","assignee":"遠藤部長","due_date":"2026/5/12","related_dept":"経営企画部・法務部"}],"budget":"ブランドガイドライン改訂（外部デザイン会社発注）：概算200万円（マーケティング部と折半検討中）"},"id":"0"}],"job_id":"al619rt79bx1acud5g6ibwm7o3q81qhe","file_id":"al61m5c2gmolyjgxu00dwwa1rlbkgnz3","model":"anthropic/claude-sonnet-4-6","status":"completed","progress":100.0,"summary":{"total":1,"succeeded_count":1,"failed_count":0},"created_at":"2026-05-10T01:26:12Z","updated_at":"2026-05-10T01:26:28Z","completed_at":"2026-05-10T01:26:28Z","expires_at":"2026-05-13T01:26:28Z","usage":{"total_input_characters":1610,"processed_input_characters":1610,"skipped_characters":0,"output_characters":1732,"vector_bytes":0},"output_file_id":"al61vtcluxp60cnpufouh7jgfhoghjj3"}];
+
+// ============================================================
+// INIT
+// ============================================================
+let allTasks = [], allRisks = [], allInterdept = [];
+
+function init(data) {
+  const completed = data.filter(d => d.status === 'completed' && d.results && d.results[0]);
+
+  completed.forEach(d => {
+    const out = d.results[0].output;
+    if (out.tasks)            allTasks    = allTasks.concat(out.tasks.map(t => ({...t, dept: out.department})));
+    if (out.risks)            allRisks    = allRisks.concat(out.risks.map(r => ({...r, dept: out.department})));
+    if (out.interdept_requests) allInterdept = allInterdept.concat(out.interdept_requests);
+  });
+
+  const highRisks = allRisks.filter(r => r.severity === '高');
+  const midRisks  = allRisks.filter(r => r.severity === '中');
+  const lowRisks  = allRisks.filter(r => r.severity === '低');
+
+  // Topbar date
+  document.getElementById('topbar-date').textContent = new Date().toLocaleString('ja-JP');
+
+  // Nav badges
+  document.getElementById('nb-depts').textContent = data.length + '部門';
+  document.getElementById('nb-tasks').textContent = allTasks.length + '件';
+  document.getElementById('nb-risks').textContent = '高' + highRisks.length + '件';
+  document.getElementById('nb-inter').textContent = allInterdept.length + '件';
+
+  buildOverview(data, completed, highRisks, midRisks, lowRisks);
+  buildTasks();
+  buildRisks(highRisks, midRisks, lowRisks);
+  buildInterdept();
+  buildDepts(data);
+  buildCharts(completed, highRisks, midRisks, lowRisks);
+}
+
+// ============================================================
+// ① 経営サマリー
+// ============================================================
+function buildOverview(data, completed, hi, mid, lo) {
+  document.getElementById('overview-sub').textContent =
+    completed.length + '/' + data.length + ' 部門完了 · 全社タスク ' + allTasks.length + ' 件 · 高リスク ' + hi.length + ' 件';
+
+  const kpiRow = document.getElementById('kpi-row');
+  kpiRow.innerHTML = [
+    { label:'処理部門数', val:data.length,        unit:'部門', badge:'badge-blue',  sub:'StructFlow処理済み' },
+    { label:'完了部門',   val:completed.length,   unit:'部門', badge:'badge-green', sub:'status: completed' },
+    { label:'全社タスク', val:allTasks.length,    unit:'件',   badge:'badge-warn',  sub:'期限管理が必要' },
+    { label:'高リスク',   val:hi.length,          unit:'件',   badge:'badge-red',   sub:'即時対応推奨' },
+  ].map(k => `
+    <div class="kpi-card" style="--kc:${k.badge==='badge-red'?'#c0392b':k.badge==='badge-green'?'#00855a':k.badge==='badge-warn'?'#d95e00':'#4f8ef7'}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}<span class="kpi-unit">${k.unit}</span></div>
+      <div class="kpi-sub">${k.sub}</div>
+      <span class="kpi-badge ${k.badge}">${k.badge==='badge-red'?'要対応':k.badge==='badge-green'?'正常':k.badge==='badge-warn'?'確認中':'処理中'}</span>
+    </div>
+  `).join('');
+
+  // Status list
+  const sl = document.getElementById('status-list');
+  const data2 = [...rawData];
+  sl.innerHTML = data2.map(d => {
+    const done = d.status === 'completed';
+    const out  = done && d.results && d.results[0] ? d.results[0].output : null;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--sh-border);font-size:12px;">
+      <span class="status-dot ${done?'s-done':'s-proc'}"></span>
+      <span style="font-weight:600;min-width:150px;">${out ? out.department : '処理中...'}</span>
+      <span style="color:var(--sh-text3);font-family:var(--mono);font-size:10px;">${done?'completed':'processing'}</span>
+      ${out ? `<span style="margin-left:auto;color:var(--sh-text2);font-size:11px;">タスク ${(out.tasks||[]).length}件 / リスク ${(out.risks||[]).length}件</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// ② タスク一覧
+// ============================================================
+function buildTasks() {
+  const sorted = [...allTasks].sort((a, b) => (a.due_date||'').localeCompare(b.due_date||''));
+  document.getElementById('tasks-tbody').innerHTML = sorted.map((t, i) => `
+    <tr>
+      <td style="font-weight:700;font-size:11px;">${t.dept||''}</td>
+      <td style="color:var(--sh-accent2);font-weight:600;">${t.assignee||''}</td>
+      <td>${t.title||''}</td>
+      <td style="font-family:var(--mono);font-size:10px;white-space:nowrap;">${t.due_date||''}</td>
+      <td style="font-size:11px;color:var(--sh-text3);">${t.related_dept||''}</td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// ③ リスク
+// ============================================================
+function buildRisks(hi, mid, lo) {
+  // KPI
+  document.getElementById('risk-kpi-row').innerHTML = [
+    { label:'高リスク', val:hi.length,  badge:'badge-red',   color:'#c0392b' },
+    { label:'中リスク', val:mid.length, badge:'badge-warn',  color:'#d95e00' },
+    { label:'低リスク', val:lo.length,  badge:'badge-green', color:'#00855a' },
+    { label:'合計',     val:allRisks.length, badge:'badge-blue', color:'#4f8ef7' },
+  ].map(k => `
+    <div class="kpi-card" style="--kc:${k.color}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}<span class="kpi-unit">件</span></div>
+      <span class="kpi-badge ${k.badge}">${k.label}</span>
+    </div>
+  `).join('');
+
+  const mkList = (list, cls) => list.map(r => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--sh-border);">
+      <span class="risk ${cls}">${r.severity}</span>
+      <span style="font-size:12px;font-weight:600;margin-left:8px;">${r.item||''}</span>
+      <div style="font-size:11px;color:var(--sh-text3);margin-top:3px;padding-left:4px;">${r.related_dept||r.dept||''}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('risk-high-list').innerHTML = hi.length ? mkList(hi, 'risk-high') : '<div style="color:var(--sh-text3);font-size:12px;">高リスクなし</div>';
+  document.getElementById('risk-mid-list').innerHTML  = [...mid,...lo].length ? mkList([...mid,...lo], mid.length?'risk-mid':'risk-low') : '<div style="color:var(--sh-text3);font-size:12px;">該当なし</div>';
+}
+
+// ============================================================
+// ④ 部門間依頼
+// ============================================================
+function buildInterdept() {
+  const el = document.getElementById('interdept-list');
+  if (!allInterdept.length) { el.innerHTML = '<div style="color:var(--sh-text3);font-size:12px;">部門間依頼なし</div>'; return; }
+  el.innerHTML = allInterdept.map(r => `
+    <div class="idmap-row">
+      <span class="idmap-from">${r.from||''}</span>
+      <span class="idmap-arrow">→</span>
+      <span class="idmap-to">${r.to||''}</span>
+      <span class="idmap-content">${r.content||''}</span>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// ⑤ 部門別カード（paper tone）
+// ============================================================
+function buildDepts(data) {
+  document.getElementById('dept-grid').innerHTML = data.map(d => {
+    if (d.status === 'processing') return `
+      <div class="dept-card">
+        <div class="dept-card-hd"><span class="dept-card-name">処理中...</span></div>
+        <div class="dept-card-bd" style="color:var(--muted);font-size:12px;">StructFlow処理中</div>
+      </div>`;
+    const out = d.results[0].output;
+    return `
+      <div class="dept-card">
+        <div class="dept-card-hd">
+          <span class="dept-card-name">${out.department||''}</span>
+          <span class="dept-card-date">${out.meeting_date||''}</span>
+        </div>
+        <div class="dept-card-bd">
+          <div class="mini-label">アクションアイテム（${(out.tasks||[]).length}件）</div>
+          ${(out.tasks||[]).slice(0,3).map(t=>`
+          <div class="task-item">
+            <span class="task-assignee">${t.assignee||''}</span>
+            <span class="task-title">${t.title||''}</span>
+            <span class="task-due">${t.due_date||''}</span>
+          </div>`).join('')}
+          ${(out.tasks||[]).length>3?`<div style="font-size:10px;color:var(--muted);margin-top:4px;">他${(out.tasks||[]).length-3}件...</div>`:''}
+          <div class="mini-label">リスク</div>
+          ${(out.risks||[]).map(r=>`<span class="risk-badge ${r.severity==='高'?'rb-high':r.severity==='中'?'rb-mid':'rb-low'}">${r.severity}: ${r.item||''}</span>`).join('')||'<span style="font-size:11px;color:var(--muted);">なし</span>'}
+          <div class="mini-label">部門間依頼（${(out.interdept_requests||[]).length}件）</div>
+          ${(out.interdept_requests||[]).slice(0,2).map(r=>`
+          <div class="interdept-row">
+            <span class="arrow">→</span>
+            <span style="font-weight:700;font-size:11px;">${r.to||''}</span>
+            <span style="font-size:11px;color:#555;">${r.content||''}</span>
+          </div>`).join('')||'<span style="font-size:11px;color:var(--muted);">なし</span>'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function buildCharts(completed, hi, mid, lo) {
+  const baseOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } }
+  };
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const tickColor = '#8b97b8';
+
+  // 部門別タスク件数（棒グラフ）
+  const deptLabels = completed.map(d => d.results[0].output.department || '不明');
+  const deptTaskCounts = completed.map(d => (d.results[0].output.tasks||[]).length);
+
+  new Chart(document.getElementById('chartTasks'), {
+    type:'bar',
+    data:{
+      labels: deptLabels,
+      datasets:[{
+        label:'タスク件数',
+        data: deptTaskCounts,
+        backgroundColor: deptTaskCounts.map(v => v >= 5 ? 'rgba(248,113,113,0.7)' : v >= 3 ? 'rgba(251,191,36,0.7)' : 'rgba(52,211,153,0.7)'),
+        borderRadius:5,
+        borderSkipped:false,
+      }]
+    },
+    options:{
+      ...baseOpts,
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:tickColor,font:{size:10}}, border:{color:'transparent'} },
+        y:{ min:0, grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10},stepSize:1}, border:{color:'transparent'} }
+      }
+    }
+  });
+
+  // リスク深刻度ドーナツ
+  new Chart(document.getElementById('chartRisk'), {
+    type:'doughnut',
+    data:{
+      labels:['高リスク','中リスク','低リスク'],
+      datasets:[{
+        data:[hi.length, mid.length, lo.length],
+        backgroundColor:['rgba(248,113,113,0.8)','rgba(251,191,36,0.8)','rgba(52,211,153,0.8)'],
+        borderColor:['#f87171','#fbbf24','#34d399'],
+        borderWidth:1,
+        hoverOffset:6,
+      }]
+    },
+    options:{
+      ...baseOpts,
+      cutout:'65%',
+      plugins:{
+        legend:{
+          display:true,
+          position:'bottom',
+          labels:{color:tickColor,font:{size:11},padding:16,boxWidth:10}
+        }
+      }
+    }
+  });
+
+  // 部門別リスク件数棒グラフ
+  const riskLabels = completed.map(d => d.results[0].output.department || '不明');
+  const riskHiCounts  = completed.map(d => (d.results[0].output.risks||[]).filter(r=>r.severity==='高').length);
+  const riskMidCounts = completed.map(d => (d.results[0].output.risks||[]).filter(r=>r.severity==='中').length);
+  const riskLoCounts  = completed.map(d => (d.results[0].output.risks||[]).filter(r=>r.severity==='低').length);
+
+  new Chart(document.getElementById('chartRiskBar'), {
+    type:'bar',
+    data:{
+      labels: riskLabels,
+      datasets:[
+        { label:'高', data:riskHiCounts,  backgroundColor:'rgba(248,113,113,0.75)', borderRadius:4, stack:'risk' },
+        { label:'中', data:riskMidCounts, backgroundColor:'rgba(251,191,36,0.75)',  borderRadius:4, stack:'risk' },
+        { label:'低', data:riskLoCounts,  backgroundColor:'rgba(52,211,153,0.75)',  borderRadius:4, stack:'risk' },
+      ]
+    },
+    options:{
+      ...baseOpts,
+      plugins:{
+        legend:{display:true,labels:{color:tickColor,font:{size:11},boxWidth:10}}
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:tickColor,font:{size:10}}, border:{color:'transparent'}, stacked:true },
+        y:{ min:0, grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10},stepSize:1}, border:{color:'transparent'}, stacked:true }
+      }
+    }
+  });
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function nav(el, page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(page).classList.add('active');
+}
+
+// ============================================================
+// RUN
+// ============================================================
+init(rawData);
+</script>
+</body>
+</html>
